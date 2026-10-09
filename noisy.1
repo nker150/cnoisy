@@ -1,0 +1,158 @@
+.Dd $Mdocdate$
+.Dt NOISY 1
+.Os
+.Sh NAME
+.Nm noisy
+.Nd crawl randomly selected HTTP and HTTPS links
+.Sh SYNOPSIS
+.Nm
+.Op Fl h | Fl \-help
+.Op Fl l Ar level | Fl \-log Ar level
+.Fl c Ar file | Fl \-config Ar file
+.Op Fl t Ar seconds | Fl \-timeout Ar seconds
+.Sh DESCRIPTION
+.Nm
+repeatedly selects a root URL from its JSON configuration, fetches the page,
+and randomly follows links found in quoted
+.Sy href
+attributes.
+Only HTTP and HTTPS URLs are accepted, including redirect destinations.
+DNS queries occur only as a side effect of resolving hostnames;
+.Nm
+does not generate independent DNS traffic.
+.Pp
+The configured depth limits linked-page visits after each root page.
+After a successful linked-page request,
+.Nm
+waits for a random whole number of seconds greater than or equal to
+.Ic min_sleep
+and less than
+.Ic max_sleep .
+A failed linked-page request or a page with fewer than two accepted links is
+added to the in-memory blacklist.
+HTTP error status codes do not by themselves make a request fail; links in
+their response bodies may still be used.
+.Pp
+Requests use a randomly selected configured user agent.
+Each transfer has a five-second maximum, shortened when necessary by the
+remaining overall timeout.
+The overall timeout also limits waits between requests.
+The process runs until that timeout expires or it receives
+.Dv SIGINT
+or
+.Dv SIGTERM .
+.Sh CONFIGURATION
+The file specified by
+.Fl c
+must be a JSON object containing the following keys:
+.Bl -tag -width Ds
+.It Ic max_depth
+Nonnegative integer.
+Maximum number of linked-page visits after fetching a
+root page.
+.It Ic min_sleep
+Nonnegative integer number of seconds for the lower end of the delay range.
+.It Ic max_sleep
+Integer greater than
+.Ic min_sleep .
+This value is an exclusive upper bound for the random delay.
+.It Ic timeout
+Either the JSON value
+.Ql false
+to disable the overall timeout, or a nonnegative integer number of seconds.
+.It Ic root_urls
+Nonempty array of HTTP or HTTPS URL strings.
+One is selected at random for
+each crawl cycle.
+.It Ic blacklisted_urls
+Array of strings.
+A URL is rejected when it contains any entry as a
+case-sensitive substring.
+URLs of failed or dead-end linked pages are added
+to this list in memory for the current process.
+.It Ic user_agents
+Nonempty array of user-agent strings.
+One is selected for each request.
+.El
+.Pp
+For example, see
+.Pa config.json
+in the source distribution.
+.Sh OPTIONS
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl c Ar file , Fl \-config Ar file
+Read configuration from
+.Ar file .
+This option is required.
+.It Fl h , Fl \-help
+Print usage information and exit successfully.
+.It Fl l Ar level , Fl \-log Ar level
+Set the minimum log level to
+.Cm debug ,
+.Cm info ,
+.Cm warning ,
+.Cm error ,
+or
+.Cm critical .
+The default is
+.Cm info .
+.It Fl t Ar seconds , Fl \-timeout Ar seconds
+Override the configured overall timeout when
+.Ar seconds
+is nonzero.
+A value of zero leaves the configuration value unchanged.
+.El
+.Sh ENVIRONMENT
+.Nm
+uses libcurl for transfers.
+Proxy environment variables supported by
+libcurl, including
+.Ev http_proxy ,
+.Ev https_proxy ,
+.Ev all_proxy ,
+and
+.Ev no_proxy ,
+may affect requests.
+.Sh FILES
+.Bl -tag -width Ds
+.It Pa config.json
+Example configuration in the source checkout.
+.It Pa /opt/noisy/config.json
+Configuration path used by the example service files.
+.El
+.Sh EXIT STATUS
+.Ex -std
+Usage errors return status 2.
+.Sh EXAMPLES
+Run using the configuration in the current directory:
+.Pp
+.Dl noisy --config config.json
+.Pp
+Run for one hour with debug logging:
+.Pp
+.Dl noisy -c /opt/noisy/config.json -l debug -t 3600
+.Pp
+Install the executable and manual page under the default
+.Pa /usr/local
+prefix:
+.Pp
+.Dl make install
+.Sh SEE ALSO
+.Lk https://curl.se/libcurl/c/ "libcurl documentation"
+.Lk https://man.openbsd.org/mdoc.7 "mdoc(7)"
+.Sh HISTORY
+.Nm
+is a C fork of the Python program
+.Lk https://github.com/1tayH/noisy 1tayH/noisy .
+The C port is intended to reduce runtime overhead and improve reliability
+when run as a long-lived service.
+.Sh AUTHORS
+The original program was written by
+.An Itay Hury .
+.Sh CAVEATS
+.Nm
+requests links found in fetched pages, including loopback and private-network
+addresses.
+Only use root URLs you trust, and apply network-level egress restrictions if
+the process must not contact local or internal services.
