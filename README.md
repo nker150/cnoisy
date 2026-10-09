@@ -45,7 +45,7 @@ pkg_add curl jansson
 Clone Git Repo
 
 ```sh
-cd /opt; git clone https://github.com/nker150/cnoisy; cd cnoisy
+mkdir /opt; cd /opt; git clone https://github.com/nker150/cnoisy; cd cnoisy
 ```
 
 Build with BSD make:
