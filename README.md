@@ -39,7 +39,7 @@ The commands below are assuming root privileges.
 Install libcurl and Jansson:
 
 ```sh
-doas pkg_add curl jansson
+pkg_add curl jansson
 ```
 
 Clone Git Repo
