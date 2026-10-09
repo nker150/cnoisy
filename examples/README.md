@@ -1,29 +1,47 @@
-# Examples
+# Service Setup
 
-## Run multiple containers using `docker-compose`
+These examples run the checkout under `/opt/noisy` as the unprivileged `noisy` account. Keep the executable and config readable and the directory searchable by that account; the service does not need write access to the checkout.
 
-`docker-compose` is useful if you want to run more than one container at the same time, to generate more noise. To do so, simply run the following commands:
-```
-$ cd examples/docker-compose
-$ docker-compose build
-$ docker-compose up --scale noisy=<number-of-containers>
-```
+Build the program before enabling either service. Review `config.json` and use trusted root URLs. Noisy follows page links, including links to loopback and private-network addresses.
 
-## Set noisy to run automatically via systemd
+## OpenBSD
 
-You can use systemd to start noisy.py automatically on every boot. The provided
-example service assumes that you have the script copied to /opt/noisy and that
-noisy.py and config.json are readable by the 'noisy' user. You can change these
-values to suit your needs.
+Create a service account and check permissions:
 
-To configure the service:
-```
-$ sudo cp examples/systemd/noisy.service /etc/systemd/system
-$ sudo systemctl daemon-reload
-$ sudo systemctl enable noisy && sudo systemctl start noisy
+```sh
+doas useradd -m -s /sbin/nologin noisy
+doas chmod 755 /opt/noisy /opt/noisy/noisy
+doas chmod 644 /opt/noisy/config.json
 ```
 
-You can view the script's output by running:
+Install the `rc.d` script and enable the service:
+
+```sh
+doas install -o root -g wheel -m 555 examples/rc.d/noisy /etc/rc.d/noisy
+doas rcctl enable noisy
+doas rcctl start noisy
+doas rcctl check noisy
 ```
-$ journalctl -f -n noisy
+
+Use `doas rcctl stop noisy` to stop it. The service reads `/opt/noisy/config.json` and runs as `noisy`.
+
+## Debian
+
+Create a system account and check permissions:
+
+```sh
+sudo adduser --system --group --no-create-home noisy
+sudo chmod 755 /opt/noisy /opt/noisy/noisy
+sudo chmod 644 /opt/noisy/config.json
 ```
+
+Install the systemd unit and start it:
+
+```sh
+sudo install -m 644 examples/systemd/noisy.service /etc/systemd/system/noisy.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now noisy
+sudo systemctl status noisy
+```
+
+Follow logs with `journalctl -u noisy -f`; stop the service with `sudo systemctl stop noisy`.
