@@ -1,111 +1,118 @@
-
 # Noisy
-[![CircleCI](https://circleci.com/gh/1tayH/noisy/tree/master.svg?style=shield)](https://circleci.com/gh/1tayH/noisy/tree/master)
 
-A simple python script that generates random HTTP/DNS traffic noise in the background while you go about your regular web browsing, to make your web traffic data less valuable for selling and for extra obscurity.
+Noisy is a small program that crawls randomly selected HTTP and HTTPS links from configured root URLs. DNS queries happen as a side effect of hostname resolution; Noisy does not generate independent DNS traffic.
 
-Tested on MacOS High Sierra, Ubuntu 16.04 and Raspbian Stretch and is compatable with both Python 2.7 and 3.6
+This is a C fork of [1tayH/noisy](https://github.com/1tayH/noisy), originally written in Python. The port was motivated by the runtime overhead and instability observed when running the Python process as a long-lived service. The original Python source remains in this repository as a behavior reference.
 
-## Getting Started
+32-bit compatibility is retained alongside 64-bit builds. Tested on macOS 27 Golden Gate and OpenBSD 7.8. Build instructions are provided below for macOS, OpenBSD, Debian, and Slackware.
 
-These instructions will get you a copy of the project up and running on your local machine
+## Requirements
 
-### Dependencies
+A C compiler, `make`, `pkg-config`, libcurl, and Jansson development files are required. Install the development packages for the architecture you intend to build, including for 32-bit builds.
 
-Install `requests` if you do not have it already installed, using `pip`:
+## Build
 
-```
-pip install requests
-```
+### macOS
 
-### Usage
+Install dependencies with Homebrew:
 
-Clone the repository
-```
-git clone https://github.com/1tayH/noisy.git
+```sh
+brew install curl jansson pkg-config
 ```
 
-Navigate into the `noisy` directory
-```
-cd noisy
-```
+Clone Git Repo
 
-Run the script
-
-```
-python noisy.py --config config.json
+```sh
+git clone https://github.com/nker150/cnoisy
 ```
 
-The program can accept a number of command line arguments:
-```
-$ python noisy.py --help
-usage: noisy.py [-h] [--log -l] --config -c [--timeout -t]
+Compile from source in the directory of the cloned Git repo:
 
-optional arguments:
-  -h, --help    show this help message and exit
-  --log -l      logging level
-  --config -c   config file
-  --timeout -t  for how long the crawler should be running, in seconds
-```
-only the config file argument is required.
-
-###  Output
-```
-$ docker run -it noisy --config config.json --log debug
-DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 4chan.org:80
-DEBUG:urllib3.connectionpool:http://4chan.org:80 "GET / HTTP/1.1" 301 None
-DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): www.4chan.org:80
-DEBUG:urllib3.connectionpool:http://www.4chan.org:80 "GET / HTTP/1.1" 200 None
-DEBUG:root:found 92 links
-INFO:root:Visiting http://boards.4chan.org/s4s/
-DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): boards.4chan.org:80
-DEBUG:urllib3.connectionpool:http://boards.4chan.org:80 "GET /s4s/ HTTP/1.1" 200 None
-INFO:root:Visiting http://boards.4chan.org/s4s/thread/6850193#p6850345
-DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): boards.4chan.org:80
-DEBUG:urllib3.connectionpool:http://boards.4chan.org:80 "GET /s4s/thread/6850193 HTTP/1.1" 200 None
-INFO:root:Visiting http://boards.4chan.org/o/
-DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): boards.4chan.org:80
-DEBUG:urllib3.connectionpool:http://boards.4chan.org:80 "GET /o/ HTTP/1.1" 200 None
-DEBUG:root:Hit a dead end, moving to the next root URL
-DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): www.reddit.com:443
-DEBUG:urllib3.connectionpool:https://www.reddit.com:443 "GET / HTTP/1.1" 200 None
-DEBUG:root:found 237 links
-INFO:root:Visiting https://www.reddit.com/user/Saditon
-DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): www.reddit.com:443
-DEBUG:urllib3.connectionpool:https://www.reddit.com:443 "GET /user/Saditon HTTP/1.1" 200 None
-...
+```sh
+make
 ```
 
-## Build Using Docker
+### OpenBSD
 
-1. Build the image
+The commands below are assuming root privileges.
 
-`docker build -t noisy .`
+Install libcurl and Jansson:
 
-**Or** if you'd like to build it for a **Raspberry Pi** (running Raspbian stretch):
+```sh
+doas pkg_add curl jansson
+```
 
-`docker build -f Dockerfile.pi -t noisy .`
+Clone Git Repo
 
-2. Create the container and run:
+```sh
+cd /opt; git clone https://github.com/nker150/cnoisy; cd cnoisy
+```
 
-`docker run -it noisy --config config.json`
+Build with BSD make:
 
-## Some examples
+```sh
+make
+```
 
-Some edge-cases examples are available on the `examples` folder. You can read more there [examples/README.md](examples/README.md).
+If `pkg-config` is unavailable, install `pkgconf` first.
 
-## Authors
+### Debian
 
-* **Itay Hury** - *Initial work* - [1tayH](https://github.com/1tayH)
+Install the compiler, pkg-config, and development packages:
 
-See also the list of [contributors](https://github.com/1tayH/Noisy/contributors) who participated in this project.
+```sh
+sudo apt update
+sudo apt install build-essential pkg-config libcurl4-openssl-dev libjansson-dev
+```
+
+Clone Git Repo
+
+```sh
+cd /opt; git clone https://github.com/nker150/cnoisy; cd cnoisy
+```
+
+Then build:
+
+```sh
+make
+```
+
+## Run
+
+The default configuration is in `config.json`:
+
+```sh
+./noisy --config config.json
+```
+
+The program accepts `--config` (`-c`), `--log` (`-l`), `--timeout` (`-t`), and `--help` (`-h`). The JSON file remains the normal source of crawler settings; a nonzero `--timeout` overrides its timeout. Only HTTP and HTTPS URLs are accepted, including redirect destinations.
+
+Run the local integration tests with `make test`; the test harness requires Python 3.
+
+## Optional System Installation
+
+Install the executable and man page under `/usr/local`:
+
+```sh
+sudo make install
+```
+
+Use `doas make install` on OpenBSD. The default manual path is `/usr/local/man/man1/noisy.1`. On Debian, the share-man convention can be selected explicitly:
+
+```sh
+sudo make install MANDIR=/usr/local/share/man/man1
+```
+
+`PREFIX`, `BINDIR`, `MANDIR`, and `DESTDIR` can be overridden. Installation includes only the executable and man page, not the configuration or a service. See [noisy(1)](noisy.1) for the complete CLI and configuration reference.
+
+## Services
+
+OpenBSD `rc.d` and Debian systemd examples are documented in [examples/README.md](examples/README.md). Both run the checkout from `/opt/noisy` as an unprivileged service account.
+
+## History and Attribution
+
+The original Python program was written by Itay Hury. This repository is a C fork intended to reduce the overhead and improve the reliability of long-running service use.
 
 ## License
 
-This project is licensed under the GNU GPLv3 License - see the [LICENSE.md](LICENSE.md) file for details
-
-## Acknowledgments
-
-This project has been inspired by
-* [RandomNoise](http://www.randomnoise.us)
-* [web-traffic-generator](https://github.com/ecapuano/web-traffic-generator)
+This project is licensed under the GNU GPLv3 License; see [LICENSE](LICENSE).
