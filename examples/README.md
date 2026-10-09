@@ -10,8 +10,8 @@ Create a service account and check permissions:
 
 ```sh
 doas useradd -m -s /sbin/nologin noisy
-doas chmod 755 /opt/noisy /opt/noisy/noisy
-doas chmod 644 /opt/noisy/config.json
+doas chmod 755 /opt/cnoisy /opt/cnoisy/noisy
+doas chmod 644 /opt/cnoisy/config.json
 ```
 
 Install the `rc.d` script and enable the service:
@@ -23,7 +23,7 @@ doas rcctl start noisy
 doas rcctl check noisy
 ```
 
-Use `doas rcctl stop noisy` to stop it. The service reads `/opt/noisy/config.json` and runs as `noisy`.
+Use `doas rcctl stop noisy` to stop it. The service reads `/opt/cnoisy/config.json` and runs as `noisy`.
 
 ## Debian
 
@@ -31,8 +31,8 @@ Create a system account and check permissions:
 
 ```sh
 sudo adduser --system --group --no-create-home noisy
-sudo chmod 755 /opt/noisy /opt/noisy/noisy
-sudo chmod 644 /opt/noisy/config.json
+sudo chmod 755 /opt/cnoisy /opt/cnoisy/noisy
+sudo chmod 644 /opt/cnoisy/config.json
 ```
 
 Install the systemd unit and start it:
